@@ -17,7 +17,12 @@ import {
     previous,
     parseDelimited,
     toJsTable,
-    intersectionOfSets
+    intersectionOfSets,
+    getAvailableSlugSync,
+    jsTableToDelimited,
+    trimTable,
+    trimRows,
+    JsTable
 } from "../Util"
 import { strToQueryParams } from "utils/client/url"
 
@@ -321,7 +326,7 @@ describe(intersectionOfSets, () => {
     })
 })
 
-describe(toJsTable, () => {
+describe("jsTables", () => {
     it("turns an arraw of objects into arrays", () => {
         const str = `gdp,pop
 1,2`
@@ -330,7 +335,48 @@ describe(toJsTable, () => {
             ["1", "2"]
         ])
 
-        expect(toJsTable(parseDelimited(""))).toEqual([])
+        expect(toJsTable(parseDelimited(""))).toEqual(undefined)
+
+        expect(
+            jsTableToDelimited(toJsTable(parseDelimited(str))!, ",")
+        ).toEqual(str)
+    })
+
+    it("handles extra blank cells", () => {
+        const table = toJsTable(
+            parseDelimited(`gdp pop code    
+123 345 usa    
+`)
+        )
+        expect(jsTableToDelimited(trimTable(table!), " ")).toEqual(`gdp pop code
+123 345 usa`)
+    })
+})
+
+describe(trimRows, () => {
+    it("trims rows", () => {
+        const testCases: { input: JsTable; length: number }[] = [
+            {
+                input: [["pop"], [123], [null], [""], [undefined]],
+                length: 2
+            },
+            {
+                input: [[]],
+                length: 0
+            },
+            {
+                input: [
+                    ["pop", "gdp"],
+                    [123, 345],
+                    [undefined, 456]
+                ],
+                length: 3
+            }
+        ]
+
+        testCases.forEach(testCase => {
+            expect(trimRows(testCase.input).length).toEqual(testCase.length)
+        })
     })
 })
 
@@ -357,5 +403,14 @@ describe(mergeQueryStr, () => {
 
     it("handles undefined", () => {
         expect(mergeQueryStr(undefined, "")).toEqual("")
+    })
+})
+
+describe(getAvailableSlugSync, () => {
+    it("can generate a unique slug", () => {
+        expect(getAvailableSlugSync("untitled", ["untitled"])).toEqual(
+            "untitled-2"
+        )
+        expect(getAvailableSlugSync("new", ["untitled"])).toEqual("new")
     })
 })

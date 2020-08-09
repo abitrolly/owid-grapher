@@ -145,6 +145,10 @@ import { dsvFormat } from "d3-dsv"
 export type SVGElement = any
 export type VNode = any
 
+declare type HeaderRow = string[]
+declare type ValueRow = any[]
+export type JsTable = [HeaderRow, ...ValueRow]
+
 interface TouchListLike {
     [index: number]: {
         clientX: number
@@ -706,14 +710,64 @@ export function parseIntOrUndefined(s: string | undefined) {
 }
 
 export const parseDelimited = (str: string) => {
-    const delimiter = str.includes("\t") ? "\t" : ","
+    const delimiter = str.includes("\t") ? "\t" : str.includes(",") ? "," : " "
     return dsvFormat(delimiter).parse(str)
 }
 
-export const toJsTable = (rows: any[]) =>
+export const toJsTable = (rows: any[]): JsTable | undefined =>
     rows.length
-        ? [Object.keys(rows[0]), ...rows.map(row => Object.values(row))]
-        : []
+        ? [
+              Object.keys(rows[0]) as HeaderRow,
+              ...rows.map(row => Object.values(row) as ValueRow)
+          ]
+        : undefined
+
+// Drop empty rows and columns
+export const trimRows = (jsTable: JsTable): JsTable => {
+    let trimAt = undefined
+    for (let index = jsTable.length - 1; index >= 0; index--) {
+        const rowIsEmpty = jsTable[index].every(
+            (cell: any) => cell === null || cell === undefined || cell === ""
+        )
+        if (!rowIsEmpty) break
+        trimAt = index
+    }
+    return trimAt === undefined
+        ? jsTable
+        : (jsTable.slice(0, trimAt) as JsTable)
+}
+
+export const trimTable = (jsTable: JsTable): JsTable => {
+    return trimRows(jsTable)
+}
+
+//     const lastFilledRow = jsTable.indexOf
+//     return [
+//         filledHeader,
+//         ...jsTable.slice(1).map(row => row.slice(0, filledHeader.length))
+//     ]
+// }
+
+export const dropDiscontinuousRows = (jsTable: JsTable): JsTable => {
+    const firstDiscontinousRow = jsTable.findIndex(
+        row => row[0] === null || row[0] === undefined || row[0] === ""
+    )
+    return firstDiscontinousRow
+        ? (jsTable.slice(0, firstDiscontinousRow) as JsTable)
+        : jsTable
+}
+
+export const jsTableToDelimited = (table: JsTable, delimiter = "\t") => {
+    return table
+        .map((row: any) =>
+            row
+                .map((cell: any) =>
+                    cell === null || cell === undefined ? "" : cell
+                )
+                .join(delimiter)
+        )
+        .join("\n")
+}
 
 export function parseFloatOrUndefined(s: string | undefined) {
     if (s === undefined) return undefined
@@ -916,4 +970,23 @@ export function mergeQueryStr(...queryStrs: (string | undefined)[]) {
     return queryParamsToStr(
         assign({}, ...excludeUndefined(queryStrs).map(strToQueryParams))
     )
+}
+
+export const getAvailableSlugSync = (
+    baseSlug: string,
+    slugs: string[] | Set<string>
+) => {
+    slugs = Array.isArray(slugs) ? new Set(slugs) : slugs
+    const originalSlug = baseSlug
+    let num = 2
+    let suffix = ""
+    let slug = `${originalSlug}${suffix}`
+
+    while (slugs.has(slug)) {
+        slug = `${originalSlug}${suffix}`
+        suffix = "-" + num
+        num++
+    }
+
+    return slug
 }
