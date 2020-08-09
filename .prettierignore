@@ -5,4 +5,3 @@ dist
 package.json
 test/fixtures
 covidChartAndVariableMeta.json
-owid-content/
