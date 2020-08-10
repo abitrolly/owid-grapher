@@ -17,7 +17,6 @@ import {
 import { observer } from "mobx-react"
 import { bind } from "decko"
 import { ChartDimension, DimensionSpec } from "../ChartDimension"
-import * as urlBinding from "charts/UrlBinding"
 import {
     difference,
     pick,
@@ -42,11 +41,7 @@ import {
     DropdownOption,
     ExplorerControlBar
 } from "../ExplorerControls"
-import {
-    CovidQueryParams,
-    CovidUrl,
-    CovidConstrainedQueryParams
-} from "./CovidChartUrl"
+import { CovidQueryParams, CovidConstrainedQueryParams } from "./CovidChartUrl"
 import { CountryPicker } from "../CountryPicker"
 import {
     fetchAndParseData,
@@ -78,6 +73,8 @@ import { CommandPalette, Command } from "../CommandPalette"
 import { TimeBoundValue } from "charts/TimeBounds"
 import { Analytics } from "site/client/Analytics"
 import { ChartDimensionWithOwidVariable } from "charts/ChartDimensionWithOwidVariable"
+import { UrlBinder } from "charts/UrlBinder"
+import { ExtendedChartUrl } from "charts/ChartUrl"
 
 interface BootstrapProps {
     containerNode: HTMLElement
@@ -85,6 +82,7 @@ interface BootstrapProps {
     queryStr?: string
     globalEntitySelection?: GlobalEntitySelection
     isExplorerPage?: boolean
+    bindToWindow?: boolean
 }
 
 @observer
@@ -101,6 +99,7 @@ export class CovidDataExplorer extends React.Component<{
     isExplorerPage?: boolean
     globalEntitySelection?: GlobalEntitySelection
     enableKeyboardShortcuts?: boolean
+    bindToWindow?: boolean
 }> {
     static async bootstrap(props: BootstrapProps) {
         const [typedData, updated, covidMeta] = await Promise.all([
@@ -124,6 +123,7 @@ export class CovidDataExplorer extends React.Component<{
                 isExplorerPage={props.isExplorerPage}
                 globalEntitySelection={props.globalEntitySelection}
                 enableKeyboardShortcuts={true}
+                bindToWindow={props.bindToWindow}
             />,
             props.containerNode
         )
@@ -853,6 +853,7 @@ export class CovidDataExplorer extends React.Component<{
     }
 
     componentDidMount() {
+        if (this.props.bindToWindow) this.bindToWindow()
         // Show 'Add country' & 'Select countries' controls if the explorer controls are hidden.
         this.chart.hideEntityControls = this.showExplorerControls
         this.chart.externalCsvLink = covidDataPath
@@ -1102,11 +1103,10 @@ export class CovidDataExplorer extends React.Component<{
         }
     }
 
-    // Binds chart properties to global window title and URL. This should only
-    // ever be invoked from top-level JavaScript.
     bindToWindow() {
-        const url = new CovidUrl(this.chart.url, this.props.params)
-        urlBinding.bindUrlToWindow(url)
+        new UrlBinder().bindToWindow(
+            new ExtendedChartUrl(this.chart.url, [this.props.params])
+        )
     }
 
     disposers: (IReactionDisposer | Lambda)[] = []
