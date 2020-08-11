@@ -35,7 +35,7 @@ import {
     columnTypes,
     generateEntityId
 } from "charts/owidData/OwidTable"
-import { CovidConstrainedQueryParams, CovidQueryParams } from "./CovidChartUrl"
+import { CovidConstrainedQueryParams, CovidQueryParams } from "./CovidParams"
 import {
     covidDataPath,
     covidLastUpdatedPath,
